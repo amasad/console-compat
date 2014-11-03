@@ -1,0 +1,20 @@
+{
+  "name": "console-compat",
+  "version": "0.0.1",
+  "description": "Node's v0.9+ reusable console module for older versions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "console",
+    "compat",
+    "reusable"
+  ],
+  "author": "amasad",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amasad/console-compat.git"
+  }
+}

@@ -1,0 +1,122 @@
+var nodeConsole = require('console');
+
+/**
+ * Node version > 0.8 `console` module exports a reusable console class.
+ * In older versions we polyfill by adapting code from the current version:
+ * https://github.com/joyent/node/blob/176f0bd3dfd58faf1675851cd2029e05d302f1fb/lib/console.js
+ */
+module.exports =  typeof nodeConsole.Console === 'function'
+  ? nodeConsole.Console
+  : (function() {
+  // Copyright Joyent, Inc. and other Node contributors.
+  //
+  // Permission is hereby granted, free of charge, to any person obtaining a
+  // copy of this software and associated documentation files (the
+  // "Software"), to deal in the Software without restriction, including
+  // without limitation the rights to use, copy, modify, merge, publish,
+  // distribute, sublicense, and/or sell copies of the Software, and to permit
+  // persons to whom the Software is furnished to do so, subject to the
+  // following conditions:
+  //
+  // The above copyright notice and this permission notice shall be included
+  // in all copies or substantial portions of the Software.
+  //
+  // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+  // OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+  // NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+  // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+  // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+  // USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  var util = require('util');
+
+  function Console(stdout, stderr) {
+    if (!(this instanceof Console)) {
+      return new Console(stdout, stderr);
+    }
+    if (!stdout || typeof stdout.write !== 'function') {
+      throw new TypeError('Console expects a writable stream instance');
+    }
+    if (!stderr) {
+      stderr = stdout;
+    }
+    var prop = {
+      writable: true,
+      enumerable: false,
+      configurable: true
+    };
+    prop.value = stdout;
+    Object.defineProperty(this, '_stdout', prop);
+    prop.value = stderr;
+    Object.defineProperty(this, '_stderr', prop);
+    prop.value = {};
+    Object.defineProperty(this, '_times', prop);
+
+    // bind the prototype functions to this Console instance
+    var keys = Object.keys(Console.prototype);
+    for (var v = 0; v < keys.length; v++) {
+      var k = keys[v];
+      this[k] = this[k].bind(this);
+    }
+  }
+
+  Console.prototype.log = function() {
+    this._stdout.write(util.format.apply(this, arguments) + '\n');
+  };
+
+
+  Console.prototype.info = Console.prototype.log;
+
+
+  Console.prototype.warn = function() {
+    this._stderr.write(util.format.apply(this, arguments) + '\n');
+  };
+
+
+  Console.prototype.error = Console.prototype.warn;
+
+
+  Console.prototype.dir = function(object, options) {
+    this._stdout.write(util.inspect(object, util._extend({
+      customInspect: false
+    }, options)) + '\n');
+  };
+
+
+  Console.prototype.time = function(label) {
+    this._times[label] = Date.now();
+  };
+
+
+  Console.prototype.timeEnd = function(label) {
+    var time = this._times[label];
+    if (!time) {
+      throw new Error('No such label: ' + label);
+    }
+    var duration = Date.now() - time;
+    this.log('%s: %dms', label, duration);
+  };
+
+
+  Console.prototype.trace = function() {
+    // TODO probably can to do this better with V8's debug object once that is
+    // exposed.
+    var err = new Error;
+    err.name = 'Trace';
+    err.message = util.format.apply(this, arguments);
+    Error.captureStackTrace(err, arguments.callee);
+    this.error(err.stack);
+  };
+
+
+  Console.prototype.assert = function(expression) {
+    if (!expression) {
+      var arr = Array.prototype.slice.call(arguments, 1);
+      require('assert').ok(false, util.format.apply(this, arr));
+    }
+  };
+
+
+  return Console;
+})();
